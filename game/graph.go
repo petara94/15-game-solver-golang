@@ -5,18 +5,20 @@ import (
 )
 
 type Node struct {
-	Val    *State
-	childs []*Node
-	Parent *Node
+	Val        *State
+	l, r, u, d *Node
+	Parent     *Node
 }
 
 func NewNode(val *State, parent *Node) *Node {
-	return &Node{Val: val, Parent: parent, childs: []*Node{}}
+	return &Node{Val: val, Parent: parent}
 }
 
-func (n *Node) Add(val *State) *Node {
+func (n *Node) GenChild(val *State) *Node {
+	if val == nil {
+		return nil
+	}
 	ch := NewNode(val, n)
-	n.childs = append(n.childs, ch)
 	return ch
 }
 
@@ -38,29 +40,6 @@ func NewGraph(startPoint *State) *Graph {
 	return g
 }
 
-func (g *Graph) BuildGraph(from *Node) {
-
-	if from == nil {
-		from = g.StartPoint
-	}
-
-	moves := []func() (*State, error){from.Val.Up, from.Val.Left, from.Val.Down, from.Val.Right}
-
-	for _, moveAction := range moves {
-		state, err := moveAction()
-		if err == nil {
-			//if _, ok := g.nodes[state.Hash()]; !ok {
-			//	g.nodes[state.Hash()] = from.Add(state)
-			//	g.BuildGraph(g.nodes[state.Hash()])
-			//}
-			next := from.Add(state)
-			g.nodes = append(g.nodes, next)
-			g.BuildGraph(next)
-		}
-	}
-
-}
-
 func (g *Graph) SearchWinPath() []*Node {
 	res := make([]*Node, 0)
 	nodes := append([]*Node{}, g.nodes...)
@@ -69,27 +48,17 @@ func (g *Graph) SearchWinPath() []*Node {
 
 	for len(nodes) > 0 || !node.Val.IsWin {
 		if !node.Val.IsWin {
-			moves := []func() (*State, error){
-				node.Val.Up,
-				node.Val.Left,
-				node.Val.Down,
-				node.Val.Right,
-			}
-
-			for _, action := range moves {
-				nodeAfterMove, _ := action()
-				if nodeAfterMove == nil {
-					continue
+			for _, child := range nodes[0].genChilds() {
+				if child != nil {
+					nodes = append(nodes, child)
 				}
-				node.Add(nodeAfterMove)
 			}
-			nodes = append(nodes, nodes[0].childs...)
 
 		} else {
 			isFound = true
 			break
 		}
-		if len(nodes) == 1{
+		if len(nodes) == 1 {
 			break
 		}
 		node = nodes[1]
@@ -111,25 +80,73 @@ func (g *Graph) SearchWinPath() []*Node {
 	return res
 }
 
-func IsInIntAsync(arr []*Node, el *Node) bool {
-	res := false
-	var wg sync.WaitGroup
+func (g *Graph) DeepSearch(depth int) []*Node {
+	wg := sync.WaitGroup{}
+	var resultNode *Node = NewNode(nil, nil)
+	isFound := false
 
-	step := len(arr) / 12
-	for i := 0; i < len(arr); i += step {
-		if len(arr)-i < step {
-			step = len(arr) - i
-		}
-		wg.Add(1)
-		go func(from, to int) {
-			defer wg.Done()
-			for j := from; j < to; j++ {
-				if arr[j].Val.hash == el.Val.hash {
-					res = true
-				}
-			}
-		}(i, i+step)
-	}
+	wg.Add(1)
+	go g.StartPoint.searchAndBuildTree(&wg, resultNode, depth, &isFound)
+
 	wg.Wait()
+
+	if !isFound {
+		return []*Node{}
+	}
+
+	res := []*Node{resultNode}
+	current := resultNode.Parent
+	for current != nil {
+		res = append([]*Node{current}, res...)
+		current = current.Parent
+	}
+
+	return res
+}
+
+func (n *Node) searchAndBuildTree(wg *sync.WaitGroup, result *Node, depth int, isFound *bool) {
+	defer wg.Done()
+
+	if *isFound {
+		return
+	}
+
+	if n.Val.IsWin {
+		*isFound = true
+		*result = *n
+		return
+	}
+
+	if depth == 0 {
+		return
+	}
+
+	for _, ch := range n.genChilds() {
+		wg.Add(1)
+		go ch.searchAndBuildTree(wg, result, depth-1, isFound)
+	}
+
+}
+
+func (n *Node) genChilds() []*Node {
+	l, _ := n.Val.Left()
+	r, _ := n.Val.Right()
+	u, _ := n.Val.Up()
+	d, _ := n.Val.Down()
+
+	n.l = n.GenChild(l)
+	n.r = n.GenChild(r)
+	n.u = n.GenChild(u)
+	n.d = n.GenChild(d)
+
+	var res []*Node
+	ch := []*Node{n.l, n.r, n.u, n.d}
+
+	for _, c := range ch {
+		if c != nil {
+			res = append(res, c)
+		}
+	}
+
 	return res
 }

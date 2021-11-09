@@ -10,7 +10,7 @@ import (
 func main() {
 	rand.Seed(time.Now().UnixMilli())
 
-	var steps int
+	var steps, depth int
 
 	matrix := game.NewMatrix(4, 4)
 	matrix.Data[0] = []int{1, 2, 3, 4}
@@ -20,6 +20,8 @@ func main() {
 
 	fmt.Print("Количество случайных ходов на матрице: ")
 	_, _ = fmt.Scanf("%d", &steps)
+	fmt.Print("Глубина поиска: ")
+	_, _ = fmt.Scanf("%d", &depth)
 
 	startPoint := game.NewStateFromMatrix(matrix)
 	//startPoint := game.NewState()
@@ -44,8 +46,7 @@ func main() {
 
 	g := game.NewGraph(startPoint)
 
-
-	path := g.SearchWinPath()
+	path := g.DeepSearch(depth)
 
 	fmt.Println(len(path))
 
