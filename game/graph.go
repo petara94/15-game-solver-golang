@@ -4,45 +4,40 @@ import (
 	"sync"
 )
 
+//Node - элемент графа
 type Node struct {
 	Val        *State
 	l, r, u, d *Node
 	Parent     *Node
 }
 
-func NewNode(val *State, parent *Node) *Node {
+//NewNodeWithParent создает ноду из состояния и родителя
+func NewNodeWithParent(val *State, parent *Node) *Node {
 	return &Node{Val: val, Parent: parent}
 }
 
-func (n *Node) GenChild(val *State) *Node {
-	if val == nil {
-		return nil
-	}
-	ch := NewNode(val, n)
-	return ch
+//NewNode создает ноду из состояния
+func NewNode(val *State) *Node {
+	return &Node{Val: val, Parent: nil}
 }
 
 type Graph struct {
-	StartPoint *Node
-	nodes      []*Node
+	StartPoint   *Node
+	winPathWidth []*Node
+	winPathDeep  []*Node
 }
 
-func (g *Graph) Hashes() []*Node {
-	return g.nodes
-}
-
+//NewGraph Создает граф от начальной точки
 func NewGraph(startPoint *State) *Graph {
-	g := &Graph{StartPoint: NewNode(startPoint, nil)}
-	//g.nodes[g.StartPoint.Val.Hash()] = g.StartPoint
-
-	g.nodes = []*Node{g.StartPoint}
+	g := &Graph{StartPoint: NewNode(startPoint)}
 
 	return g
 }
 
-func (g *Graph) SearchWinPath() []*Node {
+//WidthSearch Поиск в ширину
+func (g *Graph) WidthSearch() []*Node {
 	res := make([]*Node, 0)
-	nodes := append([]*Node{}, g.nodes...)
+	nodes := append([]*Node{}, g.StartPoint)
 	node := nodes[0]
 	isFound := false
 
@@ -76,13 +71,14 @@ func (g *Graph) SearchWinPath() []*Node {
 		current = current.Parent
 	}
 
-	g.nodes = append([]*Node{}, res...)
+	g.winPathWidth = append([]*Node{}, res...)
 	return res
 }
 
+//DeepSearch Поиск в глубину
 func (g *Graph) DeepSearch(depth int) []*Node {
 	wg := sync.WaitGroup{}
-	var resultNode *Node = NewNode(nil, nil)
+	var resultNode *Node = NewNodeWithParent(nil, nil)
 	isFound := false
 
 	wg.Add(1)
@@ -100,10 +96,11 @@ func (g *Graph) DeepSearch(depth int) []*Node {
 		res = append([]*Node{current}, res...)
 		current = current.Parent
 	}
-
-	return res
+	g.winPathDeep = res
+	return g.winPathDeep
 }
 
+//searchAndBuildTree ищет выигрышную ноду, а если не находит запускает горутины для своих потомков
 func (n *Node) searchAndBuildTree(wg *sync.WaitGroup, result *Node, depth int, isFound *bool) {
 	defer wg.Done()
 
@@ -125,10 +122,24 @@ func (n *Node) searchAndBuildTree(wg *sync.WaitGroup, result *Node, depth int, i
 		wg.Add(1)
 		go ch.searchAndBuildTree(wg, result, depth-1, isFound)
 	}
-
 }
 
+//genChilds генерирует возможных потомков
 func (n *Node) genChilds() []*Node {
+
+	var res []*Node
+	if n.l != nil || n.r != nil || n.u != nil || n.d != nil {
+		ch := []*Node{n.l, n.r, n.u, n.d}
+
+		for _, c := range ch {
+			if c != nil {
+				res = append(res, c)
+			}
+		}
+
+		return res
+	}
+
 	l, _ := n.Val.Left()
 	r, _ := n.Val.Right()
 	u, _ := n.Val.Up()
@@ -139,7 +150,6 @@ func (n *Node) genChilds() []*Node {
 	n.u = n.GenChild(u)
 	n.d = n.GenChild(d)
 
-	var res []*Node
 	ch := []*Node{n.l, n.r, n.u, n.d}
 
 	for _, c := range ch {
@@ -149,4 +159,13 @@ func (n *Node) genChilds() []*Node {
 	}
 
 	return res
+}
+
+//GenChild создает ноду из возможного состояния
+func (n *Node) GenChild(val *State) *Node {
+	if val == nil {
+		return nil
+	}
+	ch := NewNodeWithParent(val, n)
+	return ch
 }

@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 )
 
@@ -12,22 +13,13 @@ type matrix struct {
 	M    int
 }
 
-func IsEqual(l, r *matrix) bool {
-	if l.N != r.N || l.M != r.M {
-		return false
-	}
-	for i := range l.Data {
-		for j := range l.Data[i] {
-			if l.Data[i][j] != r.Data[i][j] {
-				return false
-			}
-		}
-	}
-	return true
-}
-
+//NewMatrix создает матрицу размера N на M
 func NewMatrix(n, m int) *matrix {
 	data := make([][]int, n)
+
+	if n < 0 || m < 0 {
+		log.Fatal("N or M less than zero")
+	}
 
 	for i := range data {
 		data[i] = make([]int, m)
@@ -36,6 +28,7 @@ func NewMatrix(n, m int) *matrix {
 	return res
 }
 
+//PrintMatrix печатает матрицу в stdout
 func (m matrix) PrintMatrix() {
 	for _, row := range m.Data {
 		for _, el := range row[:len(row)-1] {
@@ -45,6 +38,8 @@ func (m matrix) PrintMatrix() {
 	}
 }
 
+//FindEl находит элемент в матрице и возвращает его координаты
+//если он есть в матрице
 func FindEl(m [][]int, elem int) ([2]int, error) {
 	res := [2]int{-1, -1}
 
@@ -64,6 +59,7 @@ func FindEl(m [][]int, elem int) ([2]int, error) {
 
 }
 
+//RandFillMatrix заполняет матрицу в случайном порядке
 func RandFillMatrix(m *matrix) {
 	if m.N == 0 {
 		return

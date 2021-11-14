@@ -6,6 +6,8 @@ import (
 	"errors"
 )
 
+//Movable объект примения на себе методы интерфейса
+//возращает изменненую копию согласно методу
 type Movable interface {
 	Up() (*State, error)
 	Down() (*State, error)
@@ -13,6 +15,7 @@ type Movable interface {
 	Right() (*State, error)
 }
 
+//State - состояние игрового поля пятнашек
 type State struct {
 	matrix
 	hash       [16]byte
@@ -20,23 +23,26 @@ type State struct {
 	IsWinnable bool
 }
 
-func (s *State) Hash() [16]byte {
-	return s.hash
+//Hash getter
+func (n *State) Hash() [16]byte {
+	return n.hash
 }
 
-func (s *State) Matrix() *matrix {
-	return &s.matrix
+//Matrix getter
+func (n *State) Matrix() *matrix {
+	return &n.matrix
 }
 
-func (s *State) checkWin() bool {
-	pre := s.matrix.Data[0][0]
+//checkWin узнает является ли состояние выигрышным
+func (n *State) checkWin() bool {
+	pre := n.matrix.Data[0][0]
 
-	for i, row := range s.matrix.Data {
+	for i, row := range n.matrix.Data {
 		for j, el := range row {
 			if i == 0 && j == 0 {
 				continue
 			}
-			if i == s.N-1 && j == s.M-1 {
+			if i == n.N-1 && j == n.M-1 {
 				break
 			}
 			if el-pre != 1 {
@@ -46,11 +52,11 @@ func (s *State) checkWin() bool {
 		}
 	}
 
-	return s.matrix.Data[s.N-1][s.M-1] == 0
+	return n.matrix.Data[n.N-1][n.M-1] == 0
 }
 
-func (s *State) Down() (*State, error) {
-	zeroPos, e := FindEl(s.matrix.Data, 0)
+func (n *State) Down() (*State, error) {
+	zeroPos, e := FindEl(n.matrix.Data, 0)
 	if e != nil {
 		panic(e)
 	}
@@ -58,7 +64,7 @@ func (s *State) Down() (*State, error) {
 		return nil, errors.New("can't move up")
 	}
 
-	state := s.CopySelf()
+	state := n.CopySelf()
 
 	swapInt(&state.matrix.Data[zeroPos[0]][zeroPos[1]], &state.matrix.Data[zeroPos[0]-1][zeroPos[1]])
 	state.genHash()
@@ -67,16 +73,16 @@ func (s *State) Down() (*State, error) {
 	return state, nil
 }
 
-func (s *State) Up() (*State, error) {
-	zeroPos, e := FindEl(s.matrix.Data, 0)
+func (n *State) Up() (*State, error) {
+	zeroPos, e := FindEl(n.matrix.Data, 0)
 	if e != nil {
 		panic(e)
 	}
-	if zeroPos[0] == s.matrix.N-1 {
+	if zeroPos[0] == n.matrix.N-1 {
 		return nil, errors.New("can't move down")
 	}
 
-	state := s.CopySelf()
+	state := n.CopySelf()
 
 	swapInt(&state.matrix.Data[zeroPos[0]][zeroPos[1]], &state.matrix.Data[zeroPos[0]+1][zeroPos[1]])
 	state.genHash()
@@ -85,8 +91,8 @@ func (s *State) Up() (*State, error) {
 	return state, nil
 }
 
-func (s *State) Right() (*State, error) {
-	zeroPos, e := FindEl(s.matrix.Data, 0)
+func (n *State) Right() (*State, error) {
+	zeroPos, e := FindEl(n.matrix.Data, 0)
 	if e != nil {
 		panic(e)
 	}
@@ -94,7 +100,7 @@ func (s *State) Right() (*State, error) {
 		return nil, errors.New("can't move left")
 	}
 
-	state := s.CopySelf()
+	state := n.CopySelf()
 
 	swapInt(&state.matrix.Data[zeroPos[0]][zeroPos[1]], &state.matrix.Data[zeroPos[0]][zeroPos[1]-1])
 	state.genHash()
@@ -103,16 +109,16 @@ func (s *State) Right() (*State, error) {
 	return state, nil
 }
 
-func (s *State) Left() (*State, error) {
-	zeroPos, e := FindEl(s.matrix.Data, 0)
+func (n *State) Left() (*State, error) {
+	zeroPos, e := FindEl(n.matrix.Data, 0)
 	if e != nil {
 		panic(e)
 	}
-	if zeroPos[1] == s.matrix.M-1 {
+	if zeroPos[1] == n.matrix.M-1 {
 		return nil, errors.New("can't move right")
 	}
 
-	state := s.CopySelf()
+	state := n.CopySelf()
 
 	swapInt(&state.matrix.Data[zeroPos[0]][zeroPos[1]], &state.matrix.Data[zeroPos[0]][zeroPos[1]+1])
 	state.genHash()
@@ -121,6 +127,7 @@ func (s *State) Left() (*State, error) {
 	return state, nil
 }
 
+//NewState Гнерирует состояние со случайной матрицой
 func NewState() *State {
 	state := &State{matrix: *NewMatrix(FieldSize, FieldSize)}
 
@@ -131,6 +138,7 @@ func NewState() *State {
 	return state
 }
 
+//NewStateFromMatrix возвращает состояние от матрицы
 func NewStateFromMatrix(m *matrix) *State {
 	state := &State{matrix: *m}
 
@@ -140,10 +148,11 @@ func NewStateFromMatrix(m *matrix) *State {
 	return state
 }
 
-func (s *State) CopySelf() *State {
-	state := &State{matrix: *NewMatrix(s.N, s.N)}
+//CopySelf Возвращает копию состояния
+func (n *State) CopySelf() *State {
+	state := &State{matrix: *NewMatrix(n.N, n.N)}
 
-	for i, row := range s.matrix.Data {
+	for i, row := range n.matrix.Data {
 		copy(state.matrix.Data[i], row)
 	}
 
@@ -154,45 +163,69 @@ func swapInt(a *int, b *int) {
 	*a, *b = *b, *a
 }
 
-func (s *State) genHash() {
+//genHash генерирует массив 16 байт - хеш сумму от положения элементов
+//на матрице, для более быстрого стравнения состояний
+func (n *State) genHash() {
 	var arrBytes []byte
 
-	for _, row := range s.matrix.Data {
+	for _, row := range n.matrix.Data {
 		jsonBytes, _ := json.Marshal(row)
 		arrBytes = append(arrBytes, jsonBytes...)
 	}
-	s.hash = md5.Sum(arrBytes)
+	n.hash = md5.Sum(arrBytes)
 }
 
-func (s *State) CheckWinnable() bool {
+//CheckWinnable Рассчитывает четность матрицы, узнавая
+//тем самым является ли она решаема
+func (n *State) CheckWinnable() bool {
 	sum := 0
 
-	for i, row := range s.matrix.Data {
+	for i, row := range n.matrix.Data {
 		for j, el := range row {
 			if el == 0 {
 				sum += i + 1
 			}
-			sum += s.parity(i, j)
+			sum += n.parity(i, j)
 		}
 	}
 
-	s.IsWinnable = sum%2 == 0
+	n.IsWinnable = sum%2 == 0
 
-	return s.IsWinnable
+	return n.IsWinnable
 }
 
-func (s *State) parity(i, j int) int {
+//parity Находит количество элементов меньших a[i][j] элемента
+func (n *State) parity(i, j int) int {
 	parity := 0
-	pos := i*s.M + j
-	for pos != s.N*s.M {
-		if s.Data[pos/s.M][pos%s.M] ==0 {
+	pos := i*n.M + j
+	for pos != n.N*n.M {
+		if n.Data[pos/n.M][pos%n.M] == 0 {
 			pos++
 			continue
 		}
-		if s.Data[pos/s.M][pos%s.M] < s.Data[i][j] {
+		if n.Data[pos/n.M][pos%n.M] < n.Data[i][j] {
 			parity++
 		}
 		pos++
 	}
 	return parity
+}
+
+//GenChilds Находит возможных потомков
+func (n *State) GenChilds() []*State {
+	l, _ := n.Left()
+	r, _ := n.Right()
+	u, _ := n.Up()
+	d, _ := n.Down()
+
+	var res []*State
+	ch := []*State{l, r, u, d}
+
+	for _, c := range ch {
+		if c != nil {
+			res = append(res, c)
+		}
+	}
+
+	return res
 }
