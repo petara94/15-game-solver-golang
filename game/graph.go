@@ -11,6 +11,11 @@ type Node struct {
 	Parent     *Node
 }
 
+type IsWin struct {
+	mu    sync.RWMutex
+	value bool
+}
+
 //NewNodeWithParent создает ноду из состояния и родителя
 func NewNodeWithParent(val *State, parent *Node) *Node {
 	return &Node{Val: val, Parent: parent}
@@ -79,14 +84,14 @@ func (g *Graph) WidthSearch() []*Node {
 func (g *Graph) DeepSearch(depth int) []*Node {
 	wg := sync.WaitGroup{}
 	var resultNode *Node = NewNodeWithParent(nil, nil)
-	isFound := false
+	isFound := IsWin{value: false}
 
 	wg.Add(1)
 	go g.StartPoint.searchAndBuildTree(&wg, resultNode, depth, &isFound)
 
 	wg.Wait()
 
-	if !isFound {
+	if !isFound.value {
 		return []*Node{}
 	}
 
@@ -101,15 +106,17 @@ func (g *Graph) DeepSearch(depth int) []*Node {
 }
 
 //searchAndBuildTree ищет выигрышную ноду, а если не находит запускает горутины для своих потомков
-func (n *Node) searchAndBuildTree(wg *sync.WaitGroup, result *Node, depth int, isFound *bool) {
+func (n *Node) searchAndBuildTree(wg *sync.WaitGroup, result *Node, depth int, isFound *IsWin) {
 	defer wg.Done()
 
-	if *isFound {
+	if isFound.value {
 		return
 	}
 
 	if n.Val.IsWin {
-		*isFound = true
+		isFound.mu.RLock()
+		isFound.value = true
+		isFound.mu.RUnlock()
 		*result = *n
 		return
 	}
