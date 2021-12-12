@@ -2,60 +2,67 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"learn-1/game"
+	"log"
 	"math/rand"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
 func main() {
 	rand.Seed(time.Now().UnixMilli())
 
-	var steps, depth int
+	var depth, N, M int
 
-	matrix := game.NewMatrix(4, 4)
-	matrix.Data[0] = []int{1, 2, 3, 4}
-	matrix.Data[1] = []int{5, 6, 7, 8}
-	matrix.Data[2] = []int{9, 10, 11, 12}
-	matrix.Data[3] = []int{13, 14, 15, 0}
+	file, err := os.Open("matrix.txt")
+	defer file.Close()
 
-	fmt.Print("Количество случайных ходов на матрице: ")
-	_, _ = fmt.Scanf("%d", &steps)
-	fmt.Print("Глубина поиска: ")
-	_, _ = fmt.Scanf("%d", &depth)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+	textB, _ := io.ReadAll(file)
+	text := string(textB)
+	symbols := strings.Split(text, "\n")
+	N, Nerr := strconv.Atoi(symbols[0])
+	M, Merr := strconv.Atoi(symbols[1])
+	depth, Derr := strconv.Atoi(symbols[2])
 
-	startPoint := game.NewStateFromMatrix(matrix)
-	//startPoint := game.NewState()
-
-	pre := startPoint
-	for steps > 0 {
-		moves := startPoint.GenChilds()
-
-		rand.Shuffle(len(moves), func(i, j int) {
-			moves[i], moves[j] = moves[j], moves[i]
-		})
-		rand.Shuffle(len(moves), func(i, j int) {
-			moves[i], moves[j] = moves[j], moves[i]
-		})
-		rand.Shuffle(len(moves), func(i, j int) {
-			moves[i], moves[j] = moves[j], moves[i]
-		})
-		rand.Shuffle(len(moves), func(i, j int) {
-			moves[i], moves[j] = moves[j], moves[i]
-		})
-		for _, ch := range moves {
-
-			if ch.Hash() == pre.Hash() {
-				continue
-			}
-
-			pre = startPoint
-			startPoint = ch
-			break
-		}
-		steps--
+	if Nerr != nil || Merr != nil || Derr != nil {
+		log.Fatalln("Неверный формат входных данных\nN M\nDepth\nmatrix...")
 	}
 
-	startPoint.PrintMatrix()
+	if len(symbols)-3 != N {
+		log.Fatal("Матрица введена неверно")
+	}
+	for _, line := range symbols[3:] {
+		if len(strings.Split(line, " ")) != M {
+			log.Fatal("Матрица введена неверно")
+		}
+	}
+
+	matrix := game.NewMatrix(N, M)
+	symbols = symbols[3:]
+
+	for i := 0; i < N; i++ {
+		arr := strings.Split(symbols[i], " ")
+		for j := 0; j < M; j++ {
+			num, readErr := strconv.Atoi(arr[j])
+			if readErr != nil {
+				log.Fatalln(readErr.Error())
+			}
+			matrix.Data[i][j] = num
+		}
+	}
+
+	fmt.Println("Исходная матрица:")
+	matrix.PrintMatrix()
+	fmt.Println("Глубина поиска: ", depth)
+
+	startPoint := game.NewStateFromMatrix(matrix)
+
 	fmt.Print("\n\n")
 
 	if !startPoint.CheckWinnable() {
@@ -75,5 +82,4 @@ func main() {
 	WidthPath := g.WidthSearch()
 	t3 := time.Since(t)
 	fmt.Println("Путь от поиска в ширину", len(WidthPath), t3)
-
 }
